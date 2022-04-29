@@ -7,6 +7,8 @@ OBJS 	= \
 	$(OBJ_DIR)/main.o \
 	$(OBJ_DIR)/sistemas.o \
 	$(OBJ_DIR)/funcAux.o \
+	$(OBJ_DIR)/ejecProg.o \
+	$(OBJ_DIR)/defines.o \
 
 CFLAGS	= -I$(INC_DIR)
 

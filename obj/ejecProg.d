@@ -1,4 +1,4 @@
-obj/funcAux.o: src/funcAux.c /usr/include/stdc-predef.h \
+obj/ejecProg.o: src/ejecProg.c /usr/include/stdc-predef.h \
  /usr/include/pthread.h /usr/include/features.h \
  /usr/include/x86_64-linux-gnu/sys/cdefs.h \
  /usr/include/x86_64-linux-gnu/bits/wordsize.h \

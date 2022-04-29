@@ -1,34 +1,60 @@
-#define MAX_LOCAL_QUEUE 3
-
 #define false 0
 #define true 1
 
-machine_t maquina;
-pthread_t* masterThreads;
-coleccion_listas_t listas;
+#define MAX_LOCAL_QUEUE 3
+#define DIR_BASE_USUARIO 0x400000
+#define PTES_MAX 49151
+#define BUFSIZE 8
+#define TAM_TLB 10
+#define NUM_RGs 16
 
-pthread_mutex_t mutexTimers, mutexGenerator, mutexScheduler;
-pthread_cond_t condTimers, condAB, condGenerator, condScheduler;
+extern unsigned char physical[0xFFFFFF];
+extern char* nombreProg;
+extern int sigkill;
+extern int elfActual;
 
-pcb_t* nullProc;
-node_t* nullNode;
+extern machine_t maquina;
+extern pthread_t* masterThreads;
+extern coleccion_listas_t listas;
 
-void* hclock();
-void* hTimerProcessGenerator();
-void* hTimerScheduler();
-void* hProcessGenerator();
-void* hScheduler();
+extern pthread_mutex_t mutexTimers, mutexLoader, mutexScheduler;
+extern pthread_cond_t condTimers, condAB, condLoader, condScheduler;
 
-void crear_pcb(pcb_t** p, int id);
-void crear_node(node_t** n, pcb_t* p);
-int cmpnode(node_t* a, node_t* b);
+extern pcb_t* nullProc;
+extern node_t* nullNode;
+extern tlb_t* nullTlb;
+extern mm_t* nullMm;
+extern status_t* nullStatus;
 
-void encolar(node_t* n, tipoLista_e tipo);
-node_t* desencolar();
+extern void* hclock();
+extern void* hTimerLoader();
+extern void* hTimerScheduler();
+extern void* hLoader();
+extern void* hScheduler();
 
-void printLista(tipoLista_e tipo);
-void printNode(node_t* n);
-void printlnTodasListas();
+extern char* concat(const char *s1, const char *s2);
+extern void crear_pcb(pcb_t** p, int id);
+extern void crear_node(node_t** n, pcb_t* p);
+extern int cmpnode(node_t* a, node_t* b);
+
+extern void encolar(node_t* n, tipoLista_e tipo);
+extern node_t* desencolar();
+
+extern void buscarSiguienteElf();
+extern void actualizarNombreProgALeer();
+
+extern void loadProgram(int pidActual);
+extern void freeProgram(node_t* n);
+extern void loadThread(node_t* n, int i, int j, int k);
+extern void freeThread(int i, int j, int k);
+extern void terminateStatus(int i, int j, int k);
+
+extern void initializePageTable();
+extern void executeProgram(int i2, int j2, int k2);
+
+extern void memHexDump(int palabrasDesdeBase);
+extern void printNode(node_t* n);
+extern void printlnTodasListas();
 
 
 

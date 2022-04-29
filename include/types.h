@@ -1,3 +1,6 @@
+typedef struct mm_ mm_t;
+typedef struct tlb_ tlb_t;
+typedef struct status_ status_t;
 typedef struct pcb pcb_t;
 typedef struct node node_t;
 typedef struct lista lista_t;
@@ -18,9 +21,31 @@ enum tipoLista_e {
     terminated
 };
 
+typedef struct mm_ {
+    unsigned char* code;
+    unsigned char* data;
+    unsigned char* pgb;
+    int psize;                      // tamaño del programa en Bytes
+} mm_t;
+
+typedef struct tlb_ {
+    unsigned int* virtualPage;      // un array de numeros (numero de pagina virtual)
+    unsigned int* physicalPage;     // un array de copias de PTEs
+    int* score;                     // un array de numeros (puntuaciones de las PTEs)
+} tlb_t;
+
+typedef struct status_ {
+    int* regs;
+    unsigned char* pc;
+    int ir;
+    unsigned char* ptbr;
+    tlb_t* tlb;
+} status_t;
+
 typedef struct pcb {
     int pid;
-    int vida;
+    status_t* status;
+    mm_t* mm;
 } pcb_t;
 
 typedef struct node {
@@ -43,13 +68,19 @@ typedef struct machine_info {
     int cpus;
     int cores;
     int threads;
-    int calls_ProcessGeneratorTick;
+    int calls_LoaderTick;
     int calls_SchedulerTick;
     int frec;
 } machine_info_t;
 
 typedef struct hilo {
 	node_t* executing;
+    int* rgs;
+    unsigned char* pc;
+    unsigned int ir;
+    unsigned char* ptbr;
+    tlb_t *tlb;
+    int flag_ocioso;
 } hilo_t;
 
 typedef struct core {
