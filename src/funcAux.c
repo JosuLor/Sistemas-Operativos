@@ -19,18 +19,6 @@ char* concat(const char *s1, const char *s2) {
     return s;
 }
 
-/*
-// esto tiene que irse
-void crear_pcb(pcb_t** p, int id) {
-    *p          = malloc(sizeof(pcb_t));
-    (*p)->pid   = id;
-    (*p)->vida  = rand() % 10;
-
-    if (((*p)->vida) < 3)
-        (*p)->vida += 3;
-}
-*/
-
 void crear_node(node_t** n, pcb_t* p) {
     *n          = malloc(sizeof(node_t));
     (*n)->data  = p;
@@ -139,9 +127,11 @@ void buscarSiguienteElf() {
         }
 
         if (maxMinLocal == 1000) {
-            printf("Se han ejecutado todos los programas. Esperando a que todos los programas terminen su ejecucion...\n");
+            printf("\n============================================================\n");
+            printf("Se han ejecutado todos los programas de ./progs/. No se van a cargar nuevos programas.\nEsperando a que todos los programas terminen su ejecucion...\n");
+            printf("============================================================\n");
             // Hacer una especie de Sigkill de la maquina
-            sigkill = 1;
+            loaderKill = 1;
             return;
         }
 

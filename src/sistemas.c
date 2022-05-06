@@ -11,49 +11,76 @@
 #include "types.h"
 #include "defines.h"
 
-int contTimers = 0;
+int contTimers  = 0;
+int sigKill     = 0;
+int killedThreads = 0;
+
+
 
 void* hclock() {
     int i, j, k;
     int kills = 0;
+    int cont = 0;
 
     while(1) {
         pthread_mutex_lock(&mutexTimers);   
-
-        if (sigkill && (kills == (maquina.info.cpus * maquina.info.cores * maquina.info.threads))) {
-            printf("\n\n\n=========================================\n\n");
-            printf("   >> >> Se han ejecutado todos los programas de ./progs/ << <<\n\n");
-            printf(" Se ha terminado la ejecucion del simulador");
-            printf("\n\n\n=========================================\n\n");
-            pthread_exit(NULL);
-            // Hay que hacer tambien los pthread_exits de los otros hilos maestros
-        }
-
-
-        for (i = 0; i < maquina.info.cpus; i++) {
-            for (j = 0; j < maquina.info.cores; j++) {
-                for (k = 0; k < maquina.info.threads; k++) {
-                    if ((maquina.cpus[i].cores[j].hilos[k].flag_ocioso == 1) && sigkill) {
-                        printf("\nSe ha acabado con el hilo [%d][%d][%d]\n", i, j, k);
-                        kills++;
-                    }
-                    if ((maquina.cpus[i].cores[j].hilos[k].flag_ocioso == 0) && (!cmpnode(maquina.cpus[i].cores[j].hilos[k].executing, nullNode))) {
-                        executeProgram(i, j, k);
+        if (killedThreads == 4) 
+            break;
+            
+        if (kills == (maquina.info.cpus * maquina.info.cores * maquina.info.threads)) {
+            sigKill = 1;
+            //printf("\n<<<<< <<<<< <<<<<<<<<<<< SIGKILL >>>>>>>>>>>>> >>>>>> >>>>>\n");
+            if (killedThreads == 4)
+                break;
+        } else {
+            for (i = 0; i < maquina.info.cpus; i++) {
+                for (j = 0; j < maquina.info.cores; j++) {
+                    for (k = 0; k < maquina.info.threads; k++) {
+                        if ((maquina.cpus[i].cores[j].hilos[k].flag_ocioso == 1) && (loaderKill == 1) && (listas.preparados.size == 0)) {
+                            printf("\nSe ha acabado con el hilo [%d][%d][%d]\n", i, j, k);
+                            kills++;
+                        }
+                        if ((maquina.cpus[i].cores[j].hilos[k].flag_ocioso == 0) && (!cmpnode(maquina.cpus[i].cores[j].hilos[k].executing, nullNode))) {
+                            executeProgram(i, j, k);
+                        }
                     }
                 }
             }
         }
 
+        cont++;
+        printf("\n%d | Alemania del Este | kills: %d\n", cont, killedThreads);
+        if (killedThreads == 4)
+                break;
+         
         while(contTimers<2) {
+            if (killedThreads == 4)
+                break;
             pthread_cond_wait(&condTimers, &mutexTimers);
         }
+        
+        if (killedThreads == 4) 
+            break;
+
+        printf("\n%d | Alemania Occidental | kills: %d\n", cont, killedThreads);
         contTimers = 0;
         usleep(maquina.info.frec);
-    
+        if (killedThreads == 4) 
+            break;
+
         pthread_cond_broadcast(&condAB);
+        if (killedThreads == 4) 
+            break;
         pthread_mutex_unlock(&mutexTimers);
+        if (killedThreads == 4) 
+            break;
     }
 
+    printf("\n\n\n==================================================================================\n\n");
+    printf("   >> >> Se han cargado y ejecutado todos los programas de ./progs/ << <<\n\n");
+    printf("         >> Se ha detenido el reloj y las unidades de ejecucion <<\n\n");
+    printf("              >> Se ha terminado la ejecucion del simulador <<");
+    printf("\n\n\n==================================================================================\n\n");
     pthread_exit(NULL);
 }
 
@@ -61,24 +88,42 @@ void* hTimerLoader() {
     usleep(50000);
     pthread_mutex_lock(&mutexTimers);   
     int contLocalTimer = 0;
+    int *contProc = malloc(sizeof(int) * 60);
     while(1) {
         pthread_mutex_lock(&mutexLoader);
+
         contLocalTimer++;
-        if (contLocalTimer >= maquina.info.calls_LoaderTick) {
+        if ((killedThreads == 0) && (contLocalTimer >= maquina.info.calls_LoaderTick)) {
             pthread_cond_signal(&condLoader);
             pthread_cond_wait(&condLoader, &mutexLoader);
             contLocalTimer = 0;
         }
+
         pthread_mutex_unlock(&mutexLoader);
 
+        if (sigKill)
+            if (killedThreads >= 2) break;
+
+        //if (sigKill == 1) {
+        //    if (killedThreads == 2 && (maquina.info.calls_LoaderTick <= maquina.info.calls_SchedulerTick)) break;
+        //    if (killedThreads == 3) break;
+        //}
+
+        //if ((killedThreads == 3) || (killedThreads == 2 && maquina.info.calls_LoaderTick >= maquina.info.calls_SchedulerTick))
+        //    break;
+        
         contTimers++;
         pthread_cond_signal(&condTimers);
         pthread_cond_wait(&condAB, &mutexTimers);
-        //printf("\n\nLEON TROTSKY\n\n");
-        //printf("\n                         ");
-        int *basura = malloc(sizeof(int) * 30);
+        
     }
 
+    contTimers++;
+    killedThreads++;
+    pthread_cond_signal(&condTimers);
+    pthread_mutex_unlock(&mutexTimers);
+    printf("\nkilledThreads: %d\n", killedThreads);
+    printf("\nhTimerLoader KILLED ---------------------------------------------------------------->\n");
     pthread_exit(NULL);
 }
 
@@ -88,22 +133,39 @@ void* hTimerScheduler() {
     int contLocalTimer = 0;
     while(1) {
         pthread_mutex_lock(&mutexScheduler);
+        
         contLocalTimer++;
-        if (contLocalTimer >= maquina.info.calls_SchedulerTick) {
+        if ((killedThreads < 2) && (contLocalTimer >= maquina.info.calls_SchedulerTick)) {
             pthread_cond_signal(&condScheduler);
             pthread_cond_wait(&condScheduler, &mutexScheduler);
             contLocalTimer = 0;
         }
+
         pthread_mutex_unlock(&mutexScheduler);
+
+        if (sigKill)
+            if (killedThreads >= 2) break;
+
+        //if (sigKill == 1) {
+        //    if (killedThreads == 2 && (maquina.info.calls_SchedulerTick <= maquina.info.calls_LoaderTick)) break;
+        //    if (killedThreads == 3) break;
+        //}
+
+        //if ((killedThreads == 3) || (killedThreads == 2 && maquina.info.calls_LoaderTick <= maquina.info.calls_SchedulerTick))
+        //    break;
 
         contTimers++;
         pthread_cond_signal(&condTimers);
         pthread_cond_wait(&condAB, &mutexTimers);
-        //printf("\n\nIOSIF STALIN\n\n");
-        //printf("\n                          ");
-        int *basura = malloc(sizeof(int) * 30);
+        
     }
 
+    contTimers++;
+    killedThreads++;
+    pthread_cond_signal(&condTimers);
+    pthread_mutex_unlock(&mutexTimers);
+    printf("\nkilledThreads: %d\n", killedThreads);
+    printf("\nhTimerScheduler KILLED ---------------------------------------------------------------->\n");
     pthread_exit(NULL);
 }
 
@@ -112,18 +174,39 @@ void* hLoader() {
     pthread_mutex_lock(&mutexLoader);
     int pidActual = -1;
     while(1) {
-        if (sigkill == 0) {
+        if (loaderKill == 0) {
             buscarSiguienteElf();
-            actualizarNombreProgALeer();
-            loadProgram(++pidActual);
-            printf("[ Loader ] Programa cargado (%d.elf) y PCB creado (pid %d) ···\n", elfActual, pidActual);
+            if (loaderKill == 0) {
+                actualizarNombreProgALeer();
+                loadProgram(++pidActual);
+                printf("[ Loader ] Programa cargado en memoria (prog%d.elf) y PCB creado (pid %d) ···\n", elfActual, pidActual);
+            }
         }
+
+        //if (sigKill) {
+        //    if (killedThreads >= 0) break;
+        //}
+
+        
+        if (sigKill == 1) {
+            if (killedThreads == 0 && (maquina.info.calls_LoaderTick >= maquina.info.calls_SchedulerTick)) break;
+            if (killedThreads == 0 && (maquina.info.calls_LoaderTick <= maquina.info.calls_SchedulerTick)) break;
+            if (killedThreads == 1) break;
+        }
+        
+        //if ((killedThreads == 1) || (sigKill == 1 && maquina.info.calls_SchedulerTick >= maquina.info.calls_LoaderTick))
+        //    break;
+
         //Aqui se acaba todo lo que tengo que hacer, y signaleo que ya he acabado mi tarea/iteracion
         pthread_cond_signal(&condLoader);
         pthread_cond_wait(&condLoader, &mutexLoader);
-        //printf("\n[ Loader ] He acabado mi iteracion, ahora a esperar...\n");
     }
 
+    killedThreads++;
+    pthread_cond_signal(&condLoader);
+    pthread_mutex_unlock(&mutexLoader);
+    printf("\nkilledThreads: %d\n", killedThreads);
+    printf("\nhLoader KILLED ---------------------------------------------------------------->\n");
     pthread_exit(NULL);
 }
 
@@ -132,6 +215,7 @@ void* hScheduler() {
     pthread_mutex_lock(&mutexScheduler);
     int i, j, k;
     while(1) {
+        
         // Sacar pcb's acabados de los hilos y meter nullProcs mediante nullNodes
         for (i = 0; i < maquina.info.cpus; i++) {
             for (j = 0; j < maquina.info.cores; j++) {
@@ -151,7 +235,7 @@ void* hScheduler() {
         for (i = 0; i < maquina.info.cpus; i++) {
             for (j = 0; j < maquina.info.cores; j++) {
                 for (k = 0; k < maquina.info.threads; k++) {
-                    if (cmpnode(maquina.cpus[i].cores[j].hilos[k].executing, nullNode) && maquina.cpus[i].cores[j].hilos[k].flag_ocioso == 1 && sigkill == 0) {
+                    if (cmpnode(maquina.cpus[i].cores[j].hilos[k].executing, nullNode) && maquina.cpus[i].cores[j].hilos[k].flag_ocioso == 1 && listas.preparados.size > 0) {
                         node_t* sugerencia = desencolar();
                         if (cmpnode(sugerencia, nullNode)) {
                             printf("\n[Scheduler Warning] Se ha intentado cargar el nodo nulo en un hilo de ejecucion\n");
@@ -165,12 +249,31 @@ void* hScheduler() {
             }
         }
     
-        printlnTodasListas();
+        //if (sigKill) {
+        //    if (killedThreads >= 0) break;
+        //}
+
+        
+        if (sigKill == 1) {
+            if (killedThreads == 0 && (maquina.info.calls_SchedulerTick >= maquina.info.calls_LoaderTick)) break;
+            if (killedThreads == 0 && (maquina.info.calls_SchedulerTick <= maquina.info.calls_LoaderTick)) break;
+            if (killedThreads == 1) break;
+        }
+        
+        //if ((killedThreads == 1) || (sigKill == 1 && maquina.info.calls_SchedulerTick <= maquina.info.calls_LoaderTick))
+        //    break;
+
+        //printlnTodasListas();
         //Aqui se acaba todo lo que tengo que hacer, y signaleo que ya he acabado mi tarea/iteracion
         pthread_cond_signal(&condScheduler);
-        printf("\n[ Scheduler ] Iteracion del Scheduler terminada...\n");
         pthread_cond_wait(&condScheduler, &mutexScheduler);
-        printf("\n[ Scheduler ] Iteracion del Scheduler terminada...\n");
+
     }
+    
+    killedThreads++;
+    pthread_cond_signal(&condScheduler);
+    pthread_mutex_unlock(&mutexScheduler);
+    printf("\nkilledThreads: %d\n", killedThreads);
+    printf("\nhScheduler KILLED ---------------------------------------------------------------->\n");
     pthread_exit(NULL);
 }

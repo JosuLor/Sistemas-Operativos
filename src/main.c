@@ -76,9 +76,6 @@ void initializeStructures() {
                     maquina.cpus[i].cores[j].hilos[k].tlb->score[w] = -1;
                 }
                 maquina.cpus[i].cores[j].hilos[k].flag_ocioso = 1;
-                //memset(maquina.cpus[i].cores[j].hilos[k].tlb->virtualPage, -1, sizeof(unsigned int) * TAM_TLB);
-                //memset(maquina.cpus[i].cores[j].hilos[k].tlb->physicalPage, -1, sizeof(unsigned int *) * TAM_TLB);
-                //memset(maquina.cpus[i].cores[j].hilos[k].tlb->score, -1, sizeof(int) * TAM_TLB);
             }
         }
     }
@@ -148,8 +145,6 @@ int main(int argc, char* argv[]) {
     pthread_join(masterThreads[2], NULL);
     pthread_join(masterThreads[3], NULL);
     pthread_join(masterThreads[4], NULL);
-
-    //sleep(30);
 
     return 0;
 }

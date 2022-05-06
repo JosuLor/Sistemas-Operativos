@@ -10,7 +10,7 @@
 
 extern unsigned char physical[0xFFFFFF];
 extern char* nombreProg;
-extern int sigkill;
+extern int loaderKill;
 extern int elfActual;
 
 extern machine_t maquina;
@@ -19,6 +19,9 @@ extern coleccion_listas_t listas;
 
 extern pthread_mutex_t mutexTimers, mutexLoader, mutexScheduler;
 extern pthread_cond_t condTimers, condAB, condLoader, condScheduler;
+
+extern pthread_cond_t c_kill_scheduler, c_kill_loader;
+extern pthread_mutex_t m_kill_scheduler, m_kill_loader;
 
 extern pcb_t* nullProc;
 extern node_t* nullNode;

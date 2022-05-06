@@ -189,12 +189,13 @@ void loadProgram(int pidActual) {
     encolar(localNode, preparados);
     printNode(localNode);
 
-    printf("\n >> Programa cargado en memoria principal ---> %s\n\n", ruta);
-    printf("Inicio de segmento de instrucciones: %x", textSeg);
-    printf("\nInicio de segmento de datos: %x", dataSeg);
-    printf("\nTamaño del programa: %d", tamaño);
-    printf("\nInstrucciones del programa: %d", tamaño/4);
     printf("\n <--------------------------->\n");
+    printf("\nPrograma cargado en memoria principal ---> %s\n\n", ruta);
+    printf("Inicio del segmento de instrucciones: %x", textSeg);
+    printf("\nInicio de segmento de datos: %x", dataSeg);
+    printf("\nTamaño del programa: %d bytes", tamaño);
+    printf("\nTamaño del programa: %d lineas", tamaño/4);
+    printf("\n <--------------------------->\n\n");
 
     close(fd);
 }
@@ -258,10 +259,10 @@ void terminateStatus(int i, int j, int k) {
     maquina.cpus[i].cores[j].hilos[k].executing->data->status->ptbr = maquina.cpus[i].cores[j].hilos[k].ptbr;
 }
 
+int i, j, k, w, flag_exit = 0, valorDir;
+unsigned int r0, r1, r2, r3, dirvirtual, pagvirtual, offset;
+unsigned char c0, cl0, cl1, cl2, cl3;
 void executeProgram(int i2, int j2, int k2) {
-    int i, j, k, w, flag_exit, valorDir;
-    unsigned int r0, r1, r2, r3, dirvirtual, pagvirtual, offset;
-    unsigned char c0, cl0, cl1, cl2, cl3;
 
     c0 = -1;
     r0 = r1 = r2 = r3 = dirvirtual = pagvirtual = offset = -1;
@@ -491,7 +492,7 @@ void executeProgram(int i2, int j2, int k2) {
             maquina.cpus[i2].cores[j2].hilos[k2].rgs[r0] = r3;
             break;
         case 0xF:
-            printf(" Instruccion de tipo Exit; no va a operar. \n");
+            printf("    >> Instruccion de tipo EXIT | No se va a operar\n");
             break;
         default:
             printf("\n Error. Se ha intentado dejar un resultado de una instruccion sin resultado (codigo de instruccion %x)\n", c0);
@@ -501,8 +502,9 @@ void executeProgram(int i2, int j2, int k2) {
 
     if (flag_exit == 1)  {
         /* Liberar adecuadamente el hilo para que el Scheduler cargue otro programa */
-        printf("\n ==== Se ha acabado con la ejecucion del programa ====\n");
+        printf("\n\n\n\n ==== Se ha acabado con la ejecucion del programa con PID %d====\n\n\n\n", maquina.cpus[i2].cores[j2].hilos[k2].executing->data->pid);
         maquina.cpus[i2].cores[j2].hilos[k2].flag_ocioso = 1;
+        flag_exit = 0;
     }
 
 }
