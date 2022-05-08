@@ -11,6 +11,7 @@
 #include "types.h"
 #include "defines.h"
 
+// concatenar strings
 char* concat(const char *s1, const char *s2) {
     char *s = malloc(strlen(s1) + strlen(s2) + 1);
 
@@ -19,12 +20,14 @@ char* concat(const char *s1, const char *s2) {
     return s;
 }
 
+// crear nodo nuevo
 void crear_node(node_t** n, pcb_t* p) {
     *n          = malloc(sizeof(node_t));
     (*n)->data  = p;
     (*n)->next  = nullNode;
 }
 
+// comparar nodos; son iguales si el pid del pcb que contienen son iguales
 int cmpnode(node_t* a, node_t* b) {
     int pidA = a->data->pid;
     int pidB = b->data->pid;
@@ -34,6 +37,7 @@ int cmpnode(node_t* a, node_t* b) {
     return false;
 }
 
+// funcion auxiliar para encolar nodos en diferentes listas
 void encolar(node_t* n, tipoLista_e tipo) {
     if (cmpnode(n, nullNode)) {
         printf("ESTO NO SE DEBERIA DE PODER VER");
@@ -72,6 +76,7 @@ void encolar(node_t* n, tipoLista_e tipo) {
     }
 }
 
+// desencolar nodos de listas y devolver el nodo
 node_t* desencolar() {
     if (listas.preparados.size <= 0) {
         return nullNode;
@@ -89,19 +94,22 @@ node_t* desencolar() {
     }
 }
 
+// actualizar y dejar preparado el string del nombre del programa a cargar
 void actualizarNombreProgALeer() {
-    //printf("\n\n\nactualizarNombreProgALeer: elfActual %d | numEnNombre: %c%c%c\n\n\n", elfActual, nombreProg[4], nombreProg[5], nombreProg[6]);
     sprintf(&nombreProg[4], "%ld", elfActual);
 
     if (elfActual < 10) {
+        // solo hace falta coger un numero del nombre (numProg < 10)
         nombreProg[6] = nombreProg[4];
         nombreProg[5] = '0';
         nombreProg[4] = '0';
     } else if (elfActual > 9 && elfActual < 100) {
+        // solo hace falta coger dos numero del nombre (numProg > 9 && numProg < 100)
         nombreProg[6] = nombreProg[5];
         nombreProg[5] = nombreProg[4];
         nombreProg[4] = '0';
     } else if (elfActual > 99 && elfActual < 1000) {
+        // hay que coger todos los numeros del nombre (numProg > 99 && numProg < 1000)
         /* nada, el sprintf lo coloca ya bien */
     }
 }
@@ -109,34 +117,37 @@ void actualizarNombreProgALeer() {
 char numProgEnBusqueda[3];
 int numProgEnBus;
 
+// buscar siguiente elf a leer en la carpeta ./progs/
 void buscarSiguienteElf() {
     DIR *directorio;
     struct dirent *dir_struct;
     directorio = opendir("./progs/");
     int maxMinLocal = 1000;
     if (directorio) {
+        // while de lectura del directorio ./progs/
         while ((dir_struct = readdir(directorio)) != NULL) {
+            // conversion de numero de programa de char a int
             numProgEnBusqueda[0] = dir_struct->d_name[4];
             numProgEnBusqueda[1] = dir_struct->d_name[5];
             numProgEnBusqueda[2] = dir_struct->d_name[6];
             numProgEnBus = strtol(numProgEnBusqueda, NULL, 10);
             
+            // comprobar si el programa siendo analizado es el siguiente en orden
             if (numProgEnBus < maxMinLocal && numProgEnBus > elfActual) {
                 maxMinLocal = numProgEnBus;
             }
         }
 
+        // no se ha encontrado un numero de programa mayor al actual
         if (maxMinLocal == 1000) {
-            printf("\n============================================================\n");
-            printf("Se han ejecutado todos los programas de ./progs/. No se van a cargar nuevos programas.\nEsperando a que todos los programas terminen su ejecucion...\n");
-            printf("============================================================\n");
-            // Hacer una especie de Sigkill de la maquina
-            loaderKill = 1;
+            //printf("\n============================================================\n");
+            //printf("Se han ejecutado todos los programas de ./progs/. No se van a cargar nuevos programas.\nEsperando a que todos los programas terminen su ejecucion...\n");
+            //printf("============================================================\n");
+            loaderKill = 1;  // Hacer una especie de Sigkill de la maquina
             return;
         }
 
         elfActual = maxMinLocal;
-        //printf("\n====elfActual: %d (HEX: %x)====\n", elfActual, elfActual);
         closedir(directorio);
     }
 }

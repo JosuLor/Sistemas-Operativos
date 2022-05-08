@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <string.h>
+#include <time.h>
 
 #include "types.h"
 #include "defines.h"
@@ -76,9 +77,18 @@ void initializeStructures() {
                     maquina.cpus[i].cores[j].hilos[k].tlb->score[w] = -1;
                 }
                 maquina.cpus[i].cores[j].hilos[k].flag_ocioso = 1;
+                maquina.cpus[i].cores[j].hilos[k].killed = 0;
             }
         }
     }
+
+    maquina.info.progExec = 0;
+    maquina.info.instrExec = 0;
+    maquina.info.maxUsage = 0;
+    maquina.info.tej = 0;
+    maquina.info.frecOG = maquina.info.frec;
+    maquina.info.maxFrec = maquina.info.frec;
+    maquina.info.minFrec = maquina.info.frec;
 
     initializePageTable();
 
@@ -87,7 +97,6 @@ void initializeStructures() {
     nombreProg[4] = 'X'; nombreProg[5] = 'Y'; nombreProg[6] = 'Z';
     nombreProg[7] = '.'; nombreProg[8] = 'e'; nombreProg[9] = 'l'; nombreProg[10] = 'f';
 
-    printf("\n");
 }
 
 void printHelp(char* nombre) {
@@ -104,7 +113,7 @@ void printHelp(char* nombre) {
 }
 
 int main(int argc, char* argv[]) {
-    
+
     if (argc != 7) {
         printHelp(argv[0]);
         return 1;
@@ -116,6 +125,8 @@ int main(int argc, char* argv[]) {
     int local_callsLoader = atoi(argv[4]);
     int local_callsScheduler = atoi(argv[5]);
     int local_frec = atoi(argv[6]);
+
+    struct timespec t1, t0;
 
     if (local_cpus <= 0 || local_cores <= 0 || local_threads <= 0 || 
         local_callsLoader <= 0 || local_callsScheduler <= 0 || 
@@ -134,6 +145,8 @@ int main(int argc, char* argv[]) {
 
     initializeStructures();
 
+    clock_gettime (CLOCK_REALTIME, &t0);
+
     pthread_create(&masterThreads[0], NULL, hclock,                 NULL);
     pthread_create(&masterThreads[1], NULL, hTimerLoader,           NULL);
     pthread_create(&masterThreads[2], NULL, hTimerScheduler,        NULL);
@@ -145,6 +158,11 @@ int main(int argc, char* argv[]) {
     pthread_join(masterThreads[2], NULL);
     pthread_join(masterThreads[3], NULL);
     pthread_join(masterThreads[4], NULL);
+
+    clock_gettime (CLOCK_REALTIME, &t1);
+    maquina.info.tej = (t1.tv_sec - t0.tv_sec) + (t1.tv_nsec - t0.tv_nsec) / (double)1e9;
+    
+    printStats();
 
     return 0;
 }

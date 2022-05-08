@@ -58,6 +58,13 @@ extern void executeProgram(int i2, int j2, int k2);
 extern void memHexDump(int palabrasDesdeBase);
 extern void printNode(node_t* n);
 extern void printlnTodasListas();
+extern void red();
+extern void yellow();
+extern void green();
+extern void reset();
+extern void clear();
+extern void printMachine();
+extern void printStats();
 
 
 

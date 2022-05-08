@@ -73,7 +73,7 @@ void loadProgram(int pidActual) {
 // Leer comienzo de instrucciones (siempre 000000)
     read(fd, buf13, 13);
     buf13[12] = '\0';
-    printf("\n%s\n", buf13); //write(1, buf13, 13);
+    //printf("\n%s\n", buf13); //write(1, buf13, 13);
     
     // caracteres 6 - 11 tienen la informacion
     bdir[0] = buf13[6]; bdir[1] = buf13[7]; bdir[2] = buf13[8]; bdir[3] = buf13[9]; bdir[4] = buf13[10]; bdir[5] = buf13[11];
@@ -82,7 +82,7 @@ void loadProgram(int pidActual) {
 // Leer comienzo de datos
     read(fd, buf13, 13);
     buf13[12] = '\0'; 
-    printf("%s\n", buf13); //write(1, buf13, 13);
+    //printf("%s\n", buf13); //write(1, buf13, 13);
     
     // caracteres 6 - 11 tienen la informacion
     bdir[0] = buf13[6]; bdir[1] = buf13[7]; bdir[2] = buf13[8]; bdir[3] = buf13[9]; bdir[4] = buf13[10]; bdir[5] = buf13[11];
@@ -100,37 +100,42 @@ void loadProgram(int pidActual) {
     unsigned char c0, c1, c2, c3;
     int ip;
 
+    // buscar en toda la tabla de paginas
     for (i = 0, ip = 0; i <= (49151 * 4); i+=4, ip++) {
         c0 = physical[(0x20EB00 + i+0)];
 
+        // c0 == 1, es decir, el PTE indica que la pagina esta ocupada
         if (c0) {
             pagPosible = -1;
             pagCont = 0;
             continue;
         }
 
+        // el contador esta vacio, y la pagina actual esta disponible
         if (!pagCont)
             pagPosible = i;
         
         pagCont++;
 
+        // se tienen tantas paginas como son necesarias
         if (pagCont == npags)
             break;
     }
 
+    // la tabla de paginas esta llena
     if (pagPosible == -1) {
-        printf("Memoria llena. No hay sitio en memoria en el que cargar el programa. Esperando a que se libere espacio... (a que termine un programa)");
-        // Esperar a que el Scheduler limpie algo en la tabla una vez termine un programa en ejecucion 
+        //printf("Memoria llena. No hay sitio en memoria en el que cargar el programa. Esperando a que se libere espacio... (a que termine un programa)");
+        return; 
     }
 
-    printf("\n :: Pagina encontrada :: pagina %d | %x | dir physical: %x\n", ip, (0x20EB00 + pagPosible), &physical[(0x20EB00 + pagPosible)]);
+    //printf("\n :: Pagina encontrada :: pagina %d | %x | dir physical: %x\n", ip, (0x20EB00 + pagPosible), &physical[(0x20EB00 + pagPosible)]);
 
     // Ocupar PTEs en la tabla de paginas
     for (i = (0x20EB00 + pagPosible); i < (0x20EB00 + pagPosible + (npags * 4)); i+=4)
         physical[i] = 0x01;
 
-/*  ------------- Crear PCB y nodo ------------- */
 
+/*  ------------- Crear PCB y nodo ------------- */
     node_t* localNode;
     pcb_t *p = malloc(sizeof(pcb_t));
     p->pid = pidActual;
@@ -147,15 +152,14 @@ void loadProgram(int pidActual) {
     numDirCode = numDirCode << 8;
     numDirCode += c3;
 
-    printf("\n $$ Contenido del PTE que se ha ocupado: %x %x %x %x | numDirCode: %x $$\n", physical[(0x20EB00 + pagPosible + 0)], c1, c2, c3, numDirCode);
-    printf("\n $$ Puntero al codigo del programa en el mm.code: %x, siendo el indice %d (HEX:%x)\n\n", &(physical[numDirCode]), numDirCode, numDirCode);
+    //printf("\n $$ Contenido del PTE que se ha ocupado: %x %x %x %x | numDirCode: %x $$\n", physical[(0x20EB00 + pagPosible + 0)], c1, c2, c3, numDirCode);
+    //printf("\n $$ Puntero al codigo del programa en el mm.code: %x, siendo el indice %d (HEX:%x)\n\n", &(physical[numDirCode]), numDirCode, numDirCode);
 
     p->mm = malloc(sizeof(mm_t));
-    p->mm->code = &(physical[numDirCode]);
-    //printf("\n\nNo hay violacion aun\n\n");
-    numDirCode += dataSeg;
-    p->mm->data = &(physical[numDirCode]);
-    p->mm->pgb = &(physical[(0x20EB00 + pagPosible)]);
+    p->mm->code = &(physical[numDirCode]);  // puntero a instrucciones
+    numDirCode += dataSeg;                  
+    p->mm->data = &(physical[numDirCode]);  // puntero a datos
+    p->mm->pgb = &(physical[(0x20EB00 + pagPosible)]);  // puntero a tabla de paginas
     p->mm->psize = tamaño;
 
 
@@ -163,32 +167,32 @@ void loadProgram(int pidActual) {
     int contPhysical = numDirCode - dataSeg;
 
     while ((n = read(fd, buf, BUFSIZE)) > 0) {
-/* --------------------------------------------------------- */
+/* ------------------- primer byte de la palabra ------------------------ */
         bbyte[0] = buf[0]; bbyte[1] = buf[1];
         bb = (unsigned char)strtol(bbyte, NULL, 16);
         physical[contPhysical++] = bb;
-/* --------------------------------------------------------- */
+/* ------------------- segundo byte de la palabra ----------------------- */
         bbyte[0] = buf[2]; bbyte[1] = buf[3];
         bb = (unsigned char)strtol(bbyte, NULL, 16);
         physical[contPhysical++] = bb;
-/* --------------------------------------------------------- */
+/* ------------------- tercer byte de la palabra ------------------------ */
         bbyte[0] = buf[4]; bbyte[1] = buf[5];
         bb = (unsigned char)strtol(bbyte, NULL, 16);
         physical[contPhysical++] = bb;
-/* --------------------------------------------------------- */
+/* ------------------- cuarto byte de la palabra ------------------------ */
         bbyte[0] = buf[6]; bbyte[1] = buf[7];
         bb = (unsigned char)strtol(bbyte, NULL, 16);
         physical[contPhysical++] = bb;
 
-        printf(" Physical: [%2x][%2x][%2x][%2x] | contPhysical: %x\n", physical[contPhysical-4], physical[contPhysical-3], physical[contPhysical-2], physical[contPhysical-1], contPhysical);
+        //printf(" Physical: [%2x][%2x][%2x][%2x] | contPhysical: %x\n", physical[contPhysical-4], physical[contPhysical-3], physical[contPhysical-2], physical[contPhysical-1], contPhysical);
 
         read(fd, buf, 1);   // Leer el '\n' del final de linea
     }
 
     crear_node(&localNode, p);
     encolar(localNode, preparados);
-    printNode(localNode);
-
+    //printNode(localNode);
+/*
     printf("\n <--------------------------->\n");
     printf("\nPrograma cargado en memoria principal ---> %s\n\n", ruta);
     printf("Inicio del segmento de instrucciones: %x", textSeg);
@@ -196,8 +200,10 @@ void loadProgram(int pidActual) {
     printf("\nTamaño del programa: %d bytes", tamaño);
     printf("\nTamaño del programa: %d lineas", tamaño/4);
     printf("\n <--------------------------->\n\n");
-
+*/
     close(fd);
+
+    free(buf13); free(buf); free(bdir);
 }
 
 void loadThread(node_t* n, int i, int j, int k) {
@@ -262,6 +268,7 @@ void terminateStatus(int i, int j, int k) {
 int i, j, k, w, flag_exit = 0, valorDir;
 unsigned int r0, r1, r2, r3, dirvirtual, pagvirtual, offset;
 unsigned char c0, cl0, cl1, cl2, cl3;
+
 void executeProgram(int i2, int j2, int k2) {
 
     c0 = -1;
@@ -280,7 +287,7 @@ void executeProgram(int i2, int j2, int k2) {
 
     maquina.cpus[i2].cores[j2].hilos[k2].pc += 4;
 
-    printf("\n ºººº Ejecucion de instruccion ºººº | IR: %x | PC: %x | Contenido de lo que apunta el PC: %x\n", maquina.cpus[i2].cores[j2].hilos[k2].ir, maquina.cpus[i2].cores[j2].hilos[k2].pc-4, *(maquina.cpus[i2].cores[j2].hilos[k2].pc-4));
+    //printf("\n ºººº Ejecucion de instruccion ºººº | IR: %x | PC: %x | Contenido de lo que apunta el PC: %x\n", maquina.cpus[i2].cores[j2].hilos[k2].ir, maquina.cpus[i2].cores[j2].hilos[k2].pc-4, *(maquina.cpus[i2].cores[j2].hilos[k2].pc-4));
         
     // Fase de Decodificacion. Ver que tipo de instruccion es (ld, st, add, exit) y despejar los datos de la misma
     c0 = maquina.cpus[i2].cores[j2].hilos[k2].ir >> 28;
@@ -292,7 +299,7 @@ void executeProgram(int i2, int j2, int k2) {
             r0 = r0 >> 28;
             dirvirtual = maquina.cpus[i2].cores[j2].hilos[k2].ir << 8;
             dirvirtual = dirvirtual >> 8;
-            printf("    >> Instruccion de tipo LD | %x %x(%d) %x |", c0, r0, r0, dirvirtual);
+            //printf("    >> Instruccion de tipo LD | %x %x(%d) %x |", c0, r0, r0, dirvirtual);
             break;
         case 1:
             // Conseguir del IR el registro origen, direccion virtual de destino
@@ -300,7 +307,7 @@ void executeProgram(int i2, int j2, int k2) {
             r0 = r0 >> 28;
             dirvirtual = maquina.cpus[i2].cores[j2].hilos[k2].ir << 8;
             dirvirtual = dirvirtual >> 8;
-            printf("    >> Instruccion de tipo ST | %x %x(%d) %x |", c0, r0, r0, dirvirtual);
+            //printf("    >> Instruccion de tipo ST | %x %x(%d) %x |", c0, r0, r0, dirvirtual);
             break;
         case 2:
             // Conseguir del IR el registro destino, registro origen 1, registro origen 2
@@ -310,11 +317,11 @@ void executeProgram(int i2, int j2, int k2) {
             r1 = r1 >> 28;
             r2 = maquina.cpus[i2].cores[j2].hilos[k2].ir << 12;
             r2 = r2 >> 28;
-            printf("    >> Instruccion de tipo ADD | %x %x(%d) %x(%d) %x(%d)\n", c0, r0, r0, r1, r1, r2, r2);
+            //printf("    >> Instruccion de tipo ADD | %x %x(%d) %x(%d) %x(%d)\n", c0, r0, r0, r1, r1, r2, r2);
             break;
         case 0xF:
             // Nada; acabar con la ejecucion en la fase de operacion
-            printf("    >> Instruccion de tipo EXIT | %x\n", c0);
+            //printf("    >> Instruccion de tipo EXIT | %x\n", c0);
             break;
         default:
             printf("    >> Error. Tipo de instruccion no compatible con la arquitectura. | IR: %x\n", maquina.cpus[i2].cores[j2].hilos[k2].ir);
@@ -332,7 +339,7 @@ void executeProgram(int i2, int j2, int k2) {
         offset = dirvirtual << 24;
         offset = offset >> 24;
         pagvirtual = dirvirtual >> 8;
-        printf(" pagina virtual %x(%d) :: offset %x(10:%d)\n", pagvirtual, pagvirtual, offset, offset);
+        //printf(" pagina virtual %x(%d) :: offset %x(10:%d)\n", pagvirtual, pagvirtual, offset, offset);
         /* Pasar pagvirtual por la tlb, buscando la traduccion de la pagina virtual a direccion fisica */
         /* Si es hit, se obtiene directamente la direccion fisica de la tlb */
         /* Si es miss, se tiene que buscar en la tabla de paginas del pcb y actualizar el tlb */
@@ -372,7 +379,7 @@ void executeProgram(int i2, int j2, int k2) {
                 valorDir = valorDir << 8;
                 valorDir += cl3;
 
-                printf("\n              §§ TLB hit §§ se ha referenciado la entrada %d (score %d), con pagina virtual %x y PTE %x §§\n", i, maquina.cpus[i2].cores[j2].hilos[k2].tlb->score[i], maquina.cpus[i2].cores[j2].hilos[k2].tlb->virtualPage[i], maquina.cpus[i2].cores[j2].hilos[k2].tlb->physicalPage[i]);
+                //printf("\n              §§ TLB hit §§ se ha referenciado la entrada %d (score %d), con pagina virtual %x y PTE %x §§\n", i, maquina.cpus[i2].cores[j2].hilos[k2].tlb->score[i], maquina.cpus[i2].cores[j2].hilos[k2].tlb->virtualPage[i], maquina.cpus[i2].cores[j2].hilos[k2].tlb->physicalPage[i]);
 
                 /* en valorDir se tiene el valor de la direccion requesteada */
             }
@@ -413,8 +420,8 @@ void executeProgram(int i2, int j2, int k2) {
             newPTE = newPTE >> 8;
             maquina.cpus[i2].cores[j2].hilos[k2].tlb->physicalPage[minpos] = newPTE;
 
-            printf("\n              §§ TLB miss §§ se ha ocupado la entrada %d (score %d) de la tlb, con pagina virtual %x y PTE %x §§ offset dentro de la pagina: %x\n", minpos, maquina.cpus[i2].cores[j2].hilos[k2].tlb->score[minpos], maquina.cpus[i2].cores[j2].hilos[k2].tlb->virtualPage[minpos], maquina.cpus[i2].cores[j2].hilos[k2].tlb->physicalPage[minpos], offset);
-            printf("              ====================) minpos de TLB: %d | minscore conseguida: %d (==================== \n\n", minpos, minscore);
+            //printf("\n              §§ TLB miss §§ se ha ocupado la entrada %d (score %d) de la tlb, con pagina virtual %x y PTE %x §§ offset dentro de la pagina: %x\n", minpos, maquina.cpus[i2].cores[j2].hilos[k2].tlb->score[minpos], maquina.cpus[i2].cores[j2].hilos[k2].tlb->virtualPage[minpos], maquina.cpus[i2].cores[j2].hilos[k2].tlb->physicalPage[minpos], offset);
+            //printf("              ====================) minpos de TLB: %d | minscore conseguida: %d (==================== \n\n", minpos, minscore);
             
             // Resolver direccion y acceder al valor
             dirObjetivo = maquina.cpus[i2].cores[j2].hilos[k2].tlb->physicalPage[minpos];
@@ -435,7 +442,7 @@ void executeProgram(int i2, int j2, int k2) {
             valorDir += cl3;
 
             /* en valorDir se tiene el valor de la direccion requesteada */
-            printf(" dirObjetivo: %x | contenido (valor) de la direccion: %x (10:%d)\n", dirObjetivo, valorDir, valorDir);
+            //printf(" dirObjetivo: %x | contenido (valor) de la direccion: %x (10:%d)\n", dirObjetivo, valorDir, valorDir);
         }
     }
 
@@ -454,16 +461,15 @@ void executeProgram(int i2, int j2, int k2) {
             /* Nada; despues se finaliza la ejecucion de este pcb */
             break;
         default:
-            printf("\n$$ $$ $$Esto no se deberia de haber printeado $$ $$ $$\n");
+            //printf("\n$$ $$ $$Esto no se deberia de haber printeado $$ $$ $$\n");
             break;
     }
 
     // Fase de Operar. Operar y comprobar si finalizar la ejecucion del programa
     if (c0 == 0xF) {
-        //printf("\n\n\n\n\n\n\n Alemania del Este | flag_exit activado con IR: %x\n", maquina.cpus[i2].cores[j2].hilos[k2].ir);
-        flag_exit = 1;
+        flag_exit = 1;  // activar secuencia de finalizacion
     } else if (c0 == 2) {
-        r3 = r1 + r2;
+        r3 = r1 + r2;   // sumar registros
     }
   
     // Fase de Resultados. Dejar resultado en registros o memoria
@@ -473,7 +479,7 @@ void executeProgram(int i2, int j2, int k2) {
             break;
         case 1:
             /* Dejar en physical el valor de r0 */
-            printf(" \n              >> st %x, %x\n", r0, dirObjetivo);
+            //printf(" \n              >> st %x, %x\n", r0, dirObjetivo);
             int r00, r01, r02, r03;
             r00 = r01 = r02 = r03 = r0;
             r00 = r00 >> 24;
@@ -492,17 +498,17 @@ void executeProgram(int i2, int j2, int k2) {
             maquina.cpus[i2].cores[j2].hilos[k2].rgs[r0] = r3;
             break;
         case 0xF:
-            printf("    >> Instruccion de tipo EXIT | No se va a operar\n");
+            //printf("    >> Instruccion de tipo EXIT | No se va a operar\n");
             break;
         default:
-            printf("\n Error. Se ha intentado dejar un resultado de una instruccion sin resultado (codigo de instruccion %x)\n", c0);
+            //printf("\n Error. Se ha intentado dejar un resultado de una instruccion sin resultado (codigo de instruccion %x)\n", c0);
             break;
     }
 
 
+    /* Liberar adecuadamente el hilo para que el Scheduler cargue otro programa */
     if (flag_exit == 1)  {
-        /* Liberar adecuadamente el hilo para que el Scheduler cargue otro programa */
-        printf("\n\n\n\n ==== Se ha acabado con la ejecucion del programa con PID %d====\n\n\n\n", maquina.cpus[i2].cores[j2].hilos[k2].executing->data->pid);
+        //printf("\n\n\n\n ==== Se ha acabado con la ejecucion del programa con PID %d====\n\n\n\n", maquina.cpus[i2].cores[j2].hilos[k2].executing->data->pid);
         maquina.cpus[i2].cores[j2].hilos[k2].flag_ocioso = 1;
         flag_exit = 0;
     }
@@ -521,6 +527,4 @@ void freeProgram(node_t* n) {
     // Limpiar zona de memoria del usuario
     for (i = n->data->mm->code; i < ultimaDir; i++)
         (*i) = 0x00;    
-        
-    //physical[i] = 0x00;
 }

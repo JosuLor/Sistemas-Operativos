@@ -9,6 +9,7 @@ OBJS 	= \
 	$(OBJ_DIR)/funcAux.o \
 	$(OBJ_DIR)/ejecProg.o \
 	$(OBJ_DIR)/defines.o \
+	$(OBJ_DIR)/printMaquina.o \
 
 CFLAGS	= -I$(INC_DIR)
 

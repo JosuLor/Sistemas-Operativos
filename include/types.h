@@ -70,7 +70,14 @@ typedef struct machine_info {
     int threads;
     int calls_LoaderTick;
     int calls_SchedulerTick;
+    int frecOG;
     int frec;
+    int progExec;
+    int instrExec;
+    int maxUsage;
+    double tej;
+    int maxFrec;
+    int minFrec;
 } machine_info_t;
 
 typedef struct hilo {
@@ -81,6 +88,7 @@ typedef struct hilo {
     unsigned char* ptbr;
     tlb_t *tlb;
     int flag_ocioso;
+    int killed;
 } hilo_t;
 
 typedef struct core {
