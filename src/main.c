@@ -78,6 +78,7 @@ void initializeStructures() {
                 }
                 maquina.cpus[i].cores[j].hilos[k].flag_ocioso = 1;
                 maquina.cpus[i].cores[j].hilos[k].killed = 0;
+                maquina.cpus[i].cores[j].hilos[k].msgExec = malloc(sizeof(char) * 150);
             }
         }
     }

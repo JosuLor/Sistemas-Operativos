@@ -44,7 +44,7 @@ void* hclock() {
                             executeProgram(i, j, k);    // ejecutar instrucciones
                             maquina.info.instrExec++;
                             contUsage++;
-                            if (contUsage > maquina.info.maxUsage)
+                            if (contUsage > maquina.info.maxUsage)  // registro de la mayor cantidad de hilos usados al mismo tiempo
                                 maquina.info.maxUsage = contUsage;
                         }
                     }
@@ -52,6 +52,7 @@ void* hclock() {
             }
         }
 
+        // variacion en la frecuencia del reloj
         int delta = rand() % 500;
         int masmenos = rand() % 2;
 
@@ -69,13 +70,13 @@ void* hclock() {
             }
         }
 
+        // registro de la frecuencia del reloj
         if (maquina.info.maxFrec < maquina.info.frec)
             maquina.info.maxFrec = maquina.info.frec;
         if (maquina.info.minFrec > maquina.info.frec)
             maquina.info.minFrec = maquina.info.frec;    
         
         cont++;
-        //printf("\n%d | Alemania del Este | kills: %d\n", cont, kills);
 
         // abrir barreras y esperar a que el resto del sistema termine de ejecutarse en esta iteracion 
         while(contTimers<2) {
@@ -84,7 +85,7 @@ void* hclock() {
             pthread_cond_wait(&condTimers, &mutexTimers);
         }
 
-        //printf("\n%d | Alemania Occidental | kills: %d\n", cont, killedThreads);
+        //printf("\n%d | Alemania del Este | kills: %d\n", cont, kills);
         
         if (killedThreads == 4) 
             break;
@@ -95,6 +96,7 @@ void* hclock() {
         // A terminado la iteracion actual, habilitar la siguiente iteracion
         pthread_cond_broadcast(&condAB);
         pthread_mutex_unlock(&mutexTimers);
+        //printf("\n%d | Alemania Occidental | kills: %d\n", cont, killedThreads);
     }
 
     clear();
@@ -190,7 +192,7 @@ void* hLoader() {
         if (loaderKill == 0) {
             buscarSiguienteElf();   // buscar siguiente programa a cargar en ./progs/
             if (loaderKill == 0) {
-                maquina.info.progExec++;
+                maquina.info.progExec++;        // registrar numero de programas cargados
                 actualizarNombreProgALeer();    // actualizar el nombre del programa a leer con el nombre del .elf que se ha encontrado
                 loadProgram(++pidActual);       // cargar el .elf y crear pcb
                 //printf("[ Loader ] Programa cargado en memoria (prog%d.elf) y PCB creado (pid %d) ···\n", elfActual, pidActual);
@@ -216,6 +218,7 @@ void* hLoader() {
     pthread_exit(NULL);
 }
 
+int flag_schedulerNoted = 0;
 void* hScheduler() {
     usleep(250000);               
     pthread_mutex_lock(&mutexScheduler);
@@ -231,6 +234,7 @@ void* hScheduler() {
                         //printf("[Scheduler] Se ha liberado el hilo[%d][%d][%d] del PCB %d\n", i, j, k, maquina.cpus[i].cores[j].hilos[k].executing->data->pid);
                         freeThread(i, j, k);                                                    // Limpiar estructuras del hilo
                         freeProgram(maquina.cpus[i].cores[j].hilos[k].executing);               // Liberar memoria
+                        flag_schedulerNoted = 1;
                     }
                 }
             }
@@ -247,6 +251,7 @@ void* hScheduler() {
                         } else {
                             loadThread(sugerencia, i, j, k);  // Cargar informacion del pcb y programa en el hilo
                             //printf("[Scheduler] PCB cargado en hilo[%d][%d][%d]: PCB PID: %d\n", i, j, k, maquina.cpus[i].cores[j].hilos[k].executing->data->pid);
+                            flag_schedulerNoted = 2;
                         }
                     }
                 }

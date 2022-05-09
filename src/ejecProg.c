@@ -13,8 +13,8 @@
 
 void initializePageTable() {
     int i;
-    int pte = 0x00400000;   // 00 00 00 00 (3 bytes menos significativos direccion physical)
     int d1, d2, d3;
+    int pte = 0x00400000;   // 00 00 00 00 (3 bytes menos significativos direccion physical)
 
     for (i = 0; i <= (49151 * 4); i+=4) {
         physical[(0x20EB00 + i+0)] = 0x00;
@@ -37,6 +37,7 @@ void initializePageTable() {
 }
 
 char bbyte[2];
+int flag_loaderLoaded = 0;
 
 void loadProgram(int pidActual) {
     int fd, n, i, tamaño, textSeg, dataSeg;
@@ -203,6 +204,7 @@ void loadProgram(int pidActual) {
 */
     close(fd);
 
+    flag_loaderLoaded = 1;
     free(buf13); free(buf); free(bdir);
 }
 
@@ -270,7 +272,7 @@ unsigned int r0, r1, r2, r3, dirvirtual, pagvirtual, offset;
 unsigned char c0, cl0, cl1, cl2, cl3;
 
 void executeProgram(int i2, int j2, int k2) {
-
+    int q;
     c0 = -1;
     r0 = r1 = r2 = r3 = dirvirtual = pagvirtual = offset = -1;
 

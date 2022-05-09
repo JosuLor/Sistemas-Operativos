@@ -12,6 +12,8 @@ extern unsigned char physical[0xFFFFFF];
 extern char* nombreProg;
 extern int loaderKill;
 extern int elfActual;
+extern int flag_loaderLoaded;
+extern int flag_schedulerNoted;
 
 extern machine_t maquina;
 extern pthread_t* masterThreads;

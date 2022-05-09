@@ -89,6 +89,7 @@ typedef struct hilo {
     tlb_t *tlb;
     int flag_ocioso;
     int killed;
+    char* msgExec;
 } hilo_t;
 
 typedef struct core {

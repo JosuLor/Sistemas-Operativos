@@ -52,12 +52,56 @@ void printMachine() {
     printf(" ========="); green(); printf(" Estado del sistema "); reset(); printf(" =========== \n");
     printf(" ========================================= \n\n");
 
-    printf("%c[1m",27); red(); printf(" >> Scheduler\n"); reset(); printf("%c[0m",27);
 
-    printf("%c[1m",27); red(); printf(" >> Loader\n\n"); reset(); printf("%c[0m",27);
+    if (flag_schedulerNoted == 1) {
+        printf("%c[1m",27); red(); printf(" >> Scheduler | Un programa ha finalizado su ejecucion, y se ha sacado del thread\n"); reset(); printf("%c[0m",27);
+        flag_schedulerNoted = 0;
+    } else if (flag_schedulerNoted == 2) {
+        printf("%c[1m",27); red(); printf(" >> Scheduler | Un programa ha sido cargado en un thread\n"); reset(); printf("%c[0m",27);
+        flag_schedulerNoted = 0;
+    } else {
+        printf("%c[1m",27); printf(" >> Scheduler\n"); printf("%c[0m",27);
+    }
 
 
-    printf(" ========================================= \n");
+    if (flag_loaderLoaded) {
+        printf("%c[1m",27); red(); printf(" >> Loader | programa cargado: "); 
+        for (i = 0; i < 11; i++) 
+            printf("%c", nombreProg[i]);
+        printf("\n\n");
+        reset(); printf("%c[0m",27);
+        flag_loaderLoaded = 0;
+    } else {
+        printf("%c[1m",27); printf(" >> Loader\n\n"); printf("%c[0m",27);
+    }
+    
+    printf(" >> Cola de preparados: ");
+    node_t* sig;
+    if (listas.preparados.size != 0) {
+        sig = listas.preparados.first;
+        while(!cmpnode(sig, nullNode)) {
+            printf("PID: %d  ", sig->data->pid);
+            sig = sig->next;
+            if (!cmpnode(sig, nullNode)) 
+                printf("⟼   ");
+        }
+    } else {
+        printf("cola vacia");
+    }
+    printf("\n >> Cola de terminados: ");
+    if (listas.terminated.size != 0) {
+        sig = listas.terminated.first;
+        while(!cmpnode(sig, nullNode)) {
+            printf("PID: %d  ", sig->data->pid);
+            sig = sig->next;
+            if (!cmpnode(sig, nullNode)) 
+                printf("⟼   ");
+        }
+    } else {
+        printf("cola vacia");
+    }
+
+    printf("\n\n ========================================= \n");
     printf(" ========"); green(); printf(" Estado de la maquina "); reset(); printf(" ========== \n");
     printf(" ========================================= \n\n");
     
@@ -79,7 +123,16 @@ void printMachine() {
                 if (maquina.cpus[i].cores[j].hilos[k].flag_ocioso) {
                     printf("vacio\n");
                 } else {
-                    red(); printf("ejecutando el PCB %d | IR: %x \n", maquina.cpus[i].cores[j].hilos[k].executing->data->pid, maquina.cpus[i].cores[j].hilos[k].ir); reset();
+                    red(); printf("ejecutando el PCB %d | IR: %x ", maquina.cpus[i].cores[j].hilos[k].executing->data->pid, maquina.cpus[i].cores[j].hilos[k].ir);
+                    int c0 = maquina.cpus[i].cores[j].hilos[k].ir >> 28;
+                    switch (c0) {
+                        case 0: printf(" | Instruccion de tipo LD\n"); break;
+                        case 1: printf(" | Instruccion de tipo ST\n"); break;
+                        case 2: printf(" | Instruccion de tipo ADD\n"); break;
+                        case 0xF: printf(" | Instruccion de tipo EXIT\n"); break;
+                        default: printf(" | Instruccion no compatible con la arquitectura\n"); break;
+                    }
+                    reset();
                 }
             }
         }
